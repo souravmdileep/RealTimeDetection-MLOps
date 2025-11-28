@@ -3,20 +3,39 @@
 __pycache__/
 *.pyc
 
-# Ignore Heavy Model Files (Download them in CI/CD instead)
+# =======================
+# Ignore Heavy Model Files
+# =======================
+
+# Baseline TF model files
 backend/models/v1/saved_model.pb
-backend/models/v1/variables/
+backend/models/v1/variables/*
+
+# YOLOv8 model
 backend/models/v2/*.onnx
 backend/models/v2/*.pt
 
-# Ignore datasets (Too large)
-evaluation/test_images/
-evaluation/test_labels/
-evaluation/coco128/
+# KEEP model folder structure (important for Jenkins)
+!backend/models/
+!backend/models/v1/
+!backend/models/v2/
+!backend/models/v1/.gitkeep
+!backend/models/v2/.gitkeep
 
-# Ignore IDE settings
+# =======================
+# Datasets / Large Files
+# =======================
+
+# Ignore large COCO dataset, not small test images
+evaluation/coco128/
+evaluation/test_labels/
+
+# KEEP test images (used in drift check)
+!evaluation/test_images/
+
+# =======================
+# IDE & System Files
+# =======================
 .vscode/
 .idea/
-
-# Ignore system files
 .DS_Store
