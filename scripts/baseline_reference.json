@@ -1,0 +1,17 @@
+{
+    "model_version": "v1",
+    "avg_confidence": 0.78,
+    "avg_latency_ms": 73.81,
+    "avg_detections": 2.03,
+    "expected_classes": [
+        "person", "car", "bus", "dog", "cat", "bird", "broccoli",
+        "motorcycle", "horse", "airplane", "train", "bicycle",
+        "backpack", "umbrella", "tie", "bottle", "cup", "fork", "knife",
+        "spoon", "bowl", "banana", "apple", "sandwich", "orange", "chair",
+        "couch", "bed", "toilet", "tv", "laptop", "mouse", "remote",
+        "keyboard", "cell phone", "microwave", "oven", "sink", "refrigerator",
+        "book", "clock", "vase", "scissors", "teddy bear", "toothbrush"
+    ],
+    "max_class_divergence": 0.50,
+    "min_confidence_drop": 0.15
+}

@@ -1,0 +1,22 @@
+# Ignore Python Virtual Environments
+.venv/
+__pycache__/
+*.pyc
+
+# Ignore Heavy Model Files (Download them in CI/CD instead)
+backend/models/v1/saved_model.pb
+backend/models/v1/variables/
+backend/models/v2/*.onnx
+backend/models/v2/*.pt
+
+# Ignore datasets (Too large)
+evaluation/test_images/
+evaluation/test_labels/
+evaluation/coco128/
+
+# Ignore IDE settings
+.vscode/
+.idea/
+
+# Ignore system files
+.DS_Store
