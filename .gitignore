@@ -40,3 +40,4 @@ evaluation/test_labels/
 .vscode/
 .idea/
 .DS_Store
+venv/
