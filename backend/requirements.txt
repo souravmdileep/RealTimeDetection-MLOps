@@ -3,3 +3,11 @@ uvicorn[standard]
 pillow
 python-multipart
 requests
+# ML Libraries
+ultralytics
+numpy<2.0
+tensorflow==2.14.0
+onnxruntime
+opencv-python<=4.8.0.76
+# Dependency Fixes
+ml-dtypes==0.2.0

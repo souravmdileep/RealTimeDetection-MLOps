@@ -1,0 +1,112 @@
+# --- 1. ALERT SERVICE ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alert-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alert-service
+  template:
+    metadata:
+      labels:
+        app: alert-service
+    spec:
+      containers:
+      - name: alert-service
+        image: souravmdileep/backend:latest 
+        # Note: We use the backend image because it contains the alert code too, 
+        # but we override the command to start the alert app.
+        command: ["uvicorn", "alert_service.app:app", "--host", "0.0.0.0", "--port", "8001"]
+        ports:
+        - containerPort: 8001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alert-service
+spec:
+  selector:
+    app: alert-service
+  ports:
+    - protocol: TCP
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP
+
+---
+# --- 2. BACKEND (INFERENCE) ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1 # We can scale this later!
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: souravmdileep/backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        env:
+        # This tells Backend where to find Alert Service in K8s DNS
+        - name: ALERT_SERVICE_URL
+          value: "http://alert-service:8001/log_violation"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+  type: NodePort # Expose to outside
+
+---
+# --- 3. FRONTEND ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: souravmdileep/frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 80
+  type: NodePort # Expose to outside

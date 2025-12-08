@@ -7,6 +7,8 @@ import onnxruntime as ort
 
 logger = logging.getLogger("backend")
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 COCO_CLASSES = [
     "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
     "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
@@ -44,12 +46,19 @@ class ModelManager:
             raise ValueError("Invalid model version")
 
     def _load_tf_model(self):
-        model_path = Path("models/v1")
+        # NEW: Use absolute path
+        model_path = BASE_DIR / "models" / "v1"
         return tf.saved_model.load(str(model_path))
 
     def _load_yolo_onnx(self):
-        model_path = "models/v2/yolov8n.onnx"
-        return ort.InferenceSession(model_path)
+        # NEW: Load the Quantized (Int8) model
+        model_path = BASE_DIR / "models" / "v2" / "yolov8m_int8.onnx"
+        
+        # Enable CPU specific optimizations
+        sess_options = ort.SessionOptions()
+        sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        
+        return ort.InferenceSession(str(model_path), sess_options)
 
     def predict(self, version, img):
         if version == "v1":
