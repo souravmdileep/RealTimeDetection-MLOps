@@ -152,11 +152,14 @@ class ModelManager:
 
         final_detections = []
         if len(indices) > 0:
-            for i in indices.flatten():
+            # FIX: Ensure indices is a flat list/array regardless of OpenCV version
+            for i in indices:
+                # If OpenCV returns [[1], [2]], extract the integer
+                if isinstance(i, (list, tuple, np.ndarray)):
+                    i = i[0]
+                
                 final_detections.append({
-                    "class": COCO_CLASSES[class_ids[i]],
-                    "score": confidences[i],
-                    "box": boxes[i]
+                    "class": COCO_CLASSES[class_ids[int(i)]], # Ensure 'i' is an int
+                    "score": confidences[int(i)],
+                    "box": boxes[int(i)]
                 })
-
-        return final_detections
