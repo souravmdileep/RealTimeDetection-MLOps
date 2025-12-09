@@ -19,20 +19,25 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build & Prepare Images') {
             steps {
-                sh '''
-                echo "🐳 Building Images first (Saves RAM)..."
-                
-                # Build Backend (Heavy)
-                docker build -t $BACKEND_IMAGE:test -f docker/backend.Dockerfile .
-                
-                # Build Frontend
-                docker build -t $FRONTEND_IMAGE:test -f docker/frontend.Dockerfile .
-                
-                # Build Alert Service
-                docker build -t $ALERT_IMAGE:test -f docker/alert.Dockerfile .
-                '''
+                script {
+                    // 1. ALERT SERVICE: Build from source (Fast)
+                    echo "Building Alert Service..."
+                    docker.build("$ALERT_IMAGE:latest", "-f docker/alert.Dockerfile .")
+                    
+                    // 2. FRONTEND: Build from source (Medium - proves Web Ops)
+                    echo "Building Frontend..."
+                    docker.build("$FRONTEND_IMAGE:latest", "-f docker/frontend.Dockerfile .")
+                    
+                    // 3. BACKEND: Pull optimized artifact (Heavy ML - Saves 2GB RAM/Bandwidth)
+                    echo "Pulling Pre-Optimized ML Backend..."
+                    sh """
+                        docker pull $BACKEND_IMAGE:latest
+                        # Retag it so the next stages (Push) recognize it
+                        docker tag $BACKEND_IMAGE:latest $BACKEND_IMAGE:test
+                    """
+                }
             }
         }
 
