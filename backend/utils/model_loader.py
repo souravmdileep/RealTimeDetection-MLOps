@@ -163,3 +163,5 @@ class ModelManager:
                     "score": confidences[int(i)],
                     "box": boxes[int(i)]
                 })
+
+        return final_detections  # <--- THIS WAS MISSING
