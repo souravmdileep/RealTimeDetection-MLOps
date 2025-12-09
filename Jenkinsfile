@@ -62,7 +62,7 @@ pipeline {
                     try {
                         echo "Starting Full Stack via Docker Compose..."
                         // This creates images named: mlops-pipeline-backend, mlops-pipeline-frontend
-                        sh 'docker compose up -d'
+                        sh 'docker compose up -d --build'
                         
                         echo "Waiting 30s for services to stabilize..."
                         sleep 30
