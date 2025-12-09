@@ -58,32 +58,26 @@ pipeline {
             steps {
                 script {
                     try {
-                        echo "🏥 Starting Temporary Test Container..."
-                        // Run the backend we just built on a test port 8085
-                        sh 'docker run -d -p 8085:8000 --name ci-test-backend $BACKEND_IMAGE:test'
+                        echo "🏥 Starting Full Stack via Docker Compose..."
+                        // We use the docker-compose.yml we already wrote!
+                        // It spins up Backend + Alert Service + Frontend
+                        sh 'docker compose up -d'
                         
-                        echo "⏳ Waiting 20s for backend to boot..."
-                        sleep 20
+                        echo "⏳ Waiting 30s for services to stabilize..."
+                        sleep 30
                         
                         echo "🧪 Running Health Check..."
-                        sh 'curl -f http://localhost:8085/health'
+                        // Note: In Jenkins, localhost works because we are on the host network
+                        sh 'curl -f http://localhost:8000/health'
 
                         echo "📉 Running Drift Detection..."
                         sh '''
                         . venv/bin/activate
-                        # Temporarily point script to test port 8085
-                        sed -i "s|localhost:8000|localhost:8085|g" scripts/drift_detection.py
-                        
-                        # Run script (allow failure with || true)
                         python3 scripts/drift_detection.py || true
-                        
-                        # Revert script change
-                        sed -i "s|localhost:8085|localhost:8000|g" scripts/drift_detection.py
                         '''
                     } finally {
-                        echo "🧹 Cleaning up Test Container..."
-                        sh 'docker stop ci-test-backend || true'
-                        sh 'docker rm ci-test-backend || true'
+                        echo "🧹 Cleaning up Test Environment..."
+                        sh 'docker compose down'
                     }
                 }
             }
