@@ -29,11 +29,17 @@ pipeline {
                     echo "Building Frontend..."
                     docker.build("${FRONTEND_IMAGE_HUB}:latest", "-f docker/frontend.Dockerfile .")
                     
-                    // Pull Backend (Heavy ML Layer)
-                    echo "Pulling Pre-Optimized ML Backend..."
+                    // 3. BACKEND: Build from source (Required to apply code fixes)
+                    echo "Building Backend..."
+                    
+                    // We try to pull first to use it as a cache source (speeds up build), 
+                    // but we MUST run 'build' to apply your new app.py changes.
                     sh """
-                        docker pull ${BACKEND_IMAGE_HUB}:latest
-                        docker tag ${BACKEND_IMAGE_HUB}:latest ${BACKEND_IMAGE_HUB}:test
+                        docker pull ${BACKEND_IMAGE_HUB}:latest || true
+                        docker build \
+                            --cache-from ${BACKEND_IMAGE_HUB}:latest \
+                            -t ${BACKEND_IMAGE_HUB}:latest \
+                            -f docker/backend.Dockerfile .
                     """
                 }
             }
