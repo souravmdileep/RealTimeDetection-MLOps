@@ -101,11 +101,15 @@ class ModelManager:
             detections.append({
                 "class": label,
                 "score": float(scores[i]),
-                "box": box
+                "box": [int(b) for b in box]
             })
         return detections
 
     def _predict_yolo(self, img):
+        # FIX 1: Convert BGR to RGB (YOLO expects RGB)
+        # OpenCV loads images as BGR by default, which confuses the model colors
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
         # Preprocessing
         original_h, original_w, _ = img.shape
         img_resized = cv2.resize(img, (640, 640))
@@ -130,7 +134,8 @@ class ModelManager:
             class_id = np.argmax(class_scores)
             confidence = class_scores[class_id]
 
-            if confidence > 0.5:
+            # FIX 2: Lower threshold to 0.25 (Quantized models are less confident)
+            if confidence > 0.25:
                 # YOLO box: [cx, cy, w, h] (normalized to 640x640)
                 cx, cy, w, h = pred[0], pred[1], pred[2], pred[3]
 
@@ -145,25 +150,21 @@ class ModelManager:
 
                 boxes.append([int(left), int(top), int(width), int(height)])
                 confidences.append(float(confidence))
-                class_ids.append(class_id)
+                class_ids.append(int(class_id))
 
         # Apply Non-Maximum Suppression (NMS) using OpenCV
         indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
         final_detections = []
         
-        # CRITICAL FIX for OpenCV NMS behavior
+        # FIX 3: Robust NMS Tuple Handling (Prevents 500 Crash)
         if len(indices) > 0:
-            # If indices is a tuple (common in some opencv versions), flatten it
             if isinstance(indices, tuple):
                 indices = indices[0]
-            
-            # Ensure we can iterate
             if hasattr(indices, 'flatten'):
                  indices = indices.flatten()
 
             for i in indices:
-                # Ensure i is an integer index
                 idx = int(i)
                 final_detections.append({
                     "class": COCO_CLASSES[class_ids[idx]], 
