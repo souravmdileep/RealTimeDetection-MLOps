@@ -7,6 +7,7 @@ import time
 import logging
 from pathlib import Path
 import requests 
+import traceback
 
 app = FastAPI()
 
@@ -62,64 +63,76 @@ async def predict(file: UploadFile = File(...)):
     global last_person_box
     start = time.time()
 
-    # 1. Process Image
-    image_bytes = await file.read()
-    nparr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    try:
+        # 1. Process Image
+        image_bytes = await file.read()
+        nparr = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    current_version = get_current_model()
-    model_manager.load_model(current_version)
-    detections = model_manager.predict(current_version, img)
+        current_version = get_current_model()
+        model_manager.load_model(current_version)
+        detections = model_manager.predict(current_version, img)
 
-    latency = (time.time() - start) * 1000
+        latency = (time.time() - start) * 1000
 
-    # --- 2. LOGIC FOR V1 (MOVEMENT DETECTION) ---
-    if current_version == "v1":
-        person_found = False
-        for det in detections:
-            if det["class"] == "person":
-                person_found = True
-                box = det["box"] # [x, y, w, h]
-                
-                # Calculate center point
-                center_x = box[0] + (box[2] / 2)
-                center_y = box[1] + (box[3] / 2)
-
-                if last_person_box:
-                    # Calculate movement distance
-                    prev_x, prev_y = last_person_box
-                    dist = np.sqrt((center_x - prev_x)**2 + (center_y - prev_y)**2)
+        # --- 2. LOGIC FOR V1 (MOVEMENT DETECTION) ---
+        if current_version == "v1":
+            person_found = False
+            for det in detections:
+                if det["class"] == "person":
+                    person_found = True
+                    box = det["box"] # [x, y, w, h]
                     
-                    if dist > MOVEMENT_THRESHOLD:
-                        # TRIGGER YELLOW ALERT
-                        try:
-                            payload = {"object_class": "SUSPICIOUS MOVEMENT", "confidence": dist}
-                            requests.post(ALERT_SERVICE_URL, json=payload, timeout=0.1)
-                        except: pass
-                
-                # Update history
-                last_person_box = (center_x, center_y)
-                break
-        
-        # If person is missing (Left the frame)
-        if not person_found and last_person_box:
-             try:
-                payload = {"object_class": "STUDENT LEFT FRAME", "confidence": 1.0}
-                requests.post(ALERT_SERVICE_URL, json=payload, timeout=0.1)
-             except: pass
+                    # Calculate center point
+                    center_x = box[0] + (box[2] / 2)
+                    center_y = box[1] + (box[3] / 2)
 
-
-    # --- 3. LOGIC FOR V2 (CONTRABAND DETECTION) ---
-    elif current_version == "v2":
-        for det in detections:
-            if det["class"] in BANNED_ITEMS and det["score"] > 0.5:
+                    if last_person_box:
+                        # Calculate movement distance
+                        prev_x, prev_y = last_person_box
+                        dist = np.sqrt((center_x - prev_x)**2 + (center_y - prev_y)**2)
+                        
+                        if dist > MOVEMENT_THRESHOLD:
+                            # TRIGGER YELLOW ALERT
+                            try:
+                                payload = {"object_class": "SUSPICIOUS MOVEMENT", "confidence": dist}
+                                requests.post(ALERT_SERVICE_URL, json=payload, timeout=0.1)
+                            except: pass
+                    
+                    # Update history
+                    last_person_box = (center_x, center_y)
+                    break
+            
+            # If person is missing (Left the frame)
+            if not person_found and last_person_box:
                 try:
-                    payload = {"object_class": det["class"], "confidence": det["score"]}
+                    payload = {"object_class": "STUDENT LEFT FRAME", "confidence": 1.0}
                     requests.post(ALERT_SERVICE_URL, json=payload, timeout=0.1)
                 except: pass
 
-    return {
-        "model": current_version,
-        "detections": detections,
-        "latency_ms": latency
-    }
+
+        # --- 3. LOGIC FOR V2 (CONTRABAND DETECTION) ---
+        elif current_version == "v2":
+            for det in detections:
+                if det["class"] in BANNED_ITEMS and det["score"] > 0.5:
+                    try:
+                        payload = {"object_class": det["class"], "confidence": det["score"]}
+                        requests.post(ALERT_SERVICE_URL, json=payload, timeout=0.1)
+                    except: pass
+
+        return {
+            "model": current_version,
+            "detections": detections,
+            "latency_ms": latency
+        }
+    
+    except Exception as e:
+        logger.error(f"Prediction Error: {e}")
+        traceback.print_exc()
+        # Return empty detections on error instead of crashing 500
+        return {
+            "model": "error",
+            "detections": [],
+            "latency_ms": 0,
+            "error": str(e)
+        }

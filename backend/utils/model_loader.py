@@ -46,12 +46,12 @@ class ModelManager:
             raise ValueError("Invalid model version")
 
     def _load_tf_model(self):
-        # NEW: Use absolute path
+        # Use absolute path
         model_path = BASE_DIR / "models" / "v1"
         return tf.saved_model.load(str(model_path))
 
     def _load_yolo_onnx(self):
-        # NEW: Load the Quantized (Int8) model
+        # Load the Quantized (Int8) model
         model_path = BASE_DIR / "models" / "v2" / "yolov8m_int8.onnx"
         
         # Enable CPU specific optimizations
@@ -151,17 +151,24 @@ class ModelManager:
         indices = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
 
         final_detections = []
+        
+        # CRITICAL FIX for OpenCV NMS behavior
         if len(indices) > 0:
-            # FIX: Ensure indices is a flat list/array regardless of OpenCV version
+            # If indices is a tuple (common in some opencv versions), flatten it
+            if isinstance(indices, tuple):
+                indices = indices[0]
+            
+            # Ensure we can iterate
+            if hasattr(indices, 'flatten'):
+                 indices = indices.flatten()
+
             for i in indices:
-                # If OpenCV returns [[1], [2]], extract the integer
-                if isinstance(i, (list, tuple, np.ndarray)):
-                    i = i[0]
-                
+                # Ensure i is an integer index
+                idx = int(i)
                 final_detections.append({
-                    "class": COCO_CLASSES[class_ids[int(i)]], # Ensure 'i' is an int
-                    "score": confidences[int(i)],
-                    "box": boxes[int(i)]
+                    "class": COCO_CLASSES[class_ids[idx]], 
+                    "score": confidences[idx],
+                    "box": boxes[idx]
                 })
 
-        return final_detections  # <--- THIS WAS MISSING
+        return final_detections
