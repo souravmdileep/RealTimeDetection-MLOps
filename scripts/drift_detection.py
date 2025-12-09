@@ -6,8 +6,6 @@ from collections import Counter
 
 # Configuration
 TEST_DIR = "evaluation/test_images"
-# TEST_DIR = "evaluation/bad_data"
-# Note: In Docker, this might change, but for now use localhost
 PREDICT_URL = "http://localhost:8000/predict" 
 REFERENCE_FILE = "scripts/baseline_reference.json"
 
@@ -21,13 +19,17 @@ def load_baseline():
 def run_inference(image_path):
     try:
         with open(image_path, "rb") as f:
-            start = time.time()
             r = requests.post(PREDICT_URL, files={"file": (image_path, f, "image/jpeg")})
+            
+            # --- DEBUGGING CHANGE START ---
             if r.status_code != 200:
+                print(f"FAILED: {image_path} | Status: {r.status_code} | Reason: {r.text}")
                 return None
+            # --- DEBUGGING CHANGE END ---
+            
             return r.json()
     except Exception as e:
-        print(f"Connection failed: {e}")
+        print(f"Connection failed for {image_path}: {e}")
         return None
 
 def detect_drift():
@@ -43,7 +45,7 @@ def detect_drift():
     images = [f for f in os.listdir(TEST_DIR) if f.lower().endswith((".jpg", ".png", ".jpeg"))][:20]
     
     if not images:
-        print("No images found for drift check.")
+        print(f"No images found in {TEST_DIR}.")
         return
 
     print(f"Checking {len(images)} sample images against baseline...")
@@ -55,6 +57,12 @@ def detect_drift():
         if not result: continue
 
         detections = result.get("detections", [])
+        
+        # --- DEBUGGING CHANGE: Print if empty ---
+        if not detections:
+            print(f"WARNING: Image {img} returned 0 detections.")
+        # ----------------------------------------
+
         all_det_counts.append(len(detections))
 
         for d in detections:
@@ -71,8 +79,7 @@ def detect_drift():
 
     class_counts = Counter(all_classes)
     total_detected = sum(class_counts.values())
-    class_dist = {cls: count / total_detected for cls, count in class_counts.items()}
-
+    
     print(f"Current Avg Confidence: {avg_conf:.2f} (Baseline: {baseline['avg_confidence']})")
     print(f"Current Avg Detections: {avg_det:.2f} (Baseline: {baseline['avg_detections']})")
 
@@ -97,7 +104,6 @@ def detect_drift():
         print("\n DRIFT DETECTED! ")
         for reason in drift_reasons:
             print(f" - {reason}")
-        # In a real pipeline, we would return exit(1) to fail the build
     else:
         print("\nSystem Healthy. No drift detected.")
 
