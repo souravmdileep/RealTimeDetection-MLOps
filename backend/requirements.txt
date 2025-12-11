@@ -1,13 +1,11 @@
 fastapi
-uvicorn[standard]
-pillow
+uvicorn
 python-multipart
+opencv-python-headless
+numpy<2.0.0
 requests
-# ML Libraries
-ultralytics
-numpy<2.0
-tensorflow==2.14.0
-onnxruntime
-opencv-python<=4.8.0.76
-# Dependency Fixes
+# AI Libraries pinned for stability
+tensorflow-cpu==2.15.0
 ml-dtypes==0.2.0
+onnxruntime
+ultralytics
