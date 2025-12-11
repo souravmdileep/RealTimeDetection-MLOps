@@ -5,7 +5,6 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Install system dependencies (Required for OpenCV + Model Downloading)
-# Added 'wget' and 'tar' to download and extract AI models
 RUN apt-get update && apt-get install -y \
     libgl1 \
     libglib2.0-0 \
@@ -15,34 +14,37 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements and install
 COPY backend/requirements.txt .
-# Upgrade pip first (helps find binary wheels)
 RUN pip install --upgrade pip
-
-# Install requirements with binary preference and longer timeout
 RUN pip install --no-cache-dir --prefer-binary --default-timeout=1000 -r requirements.txt
 
+# ### NEW: Explicitly install Ultralytics for the 'yolo' CLI command
+RUN pip install ultralytics
+
 # -------------------------------------------------------------------
-#  MODEL DOWNLOAD SECTION (Fixes 500 Internal Server Error)
+#  MODEL DOWNLOAD SECTION
 # -------------------------------------------------------------------
 
 # 1. Prepare Directories
 RUN mkdir -p /app/backend/models/v1
 RUN mkdir -p /app/backend/models/v2
 
-# 2. Download & Install 'v1' (SSD MobileNet V2)
-# We download the tarball, extract it, and move the 'saved_model' folder contents to /models/v1
+# 2. V1: SSD MobileNet (Download & Extract)
 RUN wget -O /tmp/ssd.tar.gz http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v2_coco_2018_03_29.tar.gz && \
     tar -xzvf /tmp/ssd.tar.gz -C /tmp && \
     mv /tmp/ssd_mobilenet_v2_coco_2018_03_29/saved_model/* /app/backend/models/v1/ && \
     rm -rf /tmp/ssd*
 
-# 3. Download & Install 'v2' (YOLOv8 Nano)
-# We download the weights file directly from Ultralytics
-RUN wget -O /app/backend/models/v2/yolov8n.pt https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8n.pt
+# 3. V2: YOLOv8 Medium (Download & Export)
+# Download the 'Medium' weights (High Accuracy)
+RUN wget -O /app/backend/models/v2/yolov8m.pt https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov8m.pt
+
+# Export to ONNX (Standard Format)
+# This generates: /app/backend/models/v2/yolov8m.onnx
+RUN yolo export model=/app/backend/models/v2/yolov8m.pt format=onnx opset=12
 
 # -------------------------------------------------------------------
 
-# Copy the rest of the backend code (app.py, utils/, etc.)
+# Copy the rest of the backend code
 COPY backend/ ./backend/
 COPY evaluation/test_images/ ./evaluation/test_images/
 COPY scripts/ ./scripts/
