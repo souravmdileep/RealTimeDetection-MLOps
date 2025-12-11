@@ -65,7 +65,7 @@ pipeline {
                         sh 'docker compose up -d --build'
                         
                         echo "Waiting 30s for services to stabilize..."
-                        sleep 30
+                        sleep 90
                         
                         echo "Running Health Check..."
                         sh 'curl -f http://localhost:8000/health'

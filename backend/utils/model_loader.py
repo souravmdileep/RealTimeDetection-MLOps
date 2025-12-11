@@ -52,7 +52,7 @@ class ModelManager:
 
     def _load_yolo_onnx(self):
         # Load the Quantized (Int8) model
-        model_path = BASE_DIR / "models" / "v2" / "yolov8m.onnx"
+        model_path = BASE_DIR / "models" / "v2" / "yolov8m_int8.onnx"
         
         # Enable CPU specific optimizations
         sess_options = ort.SessionOptions()
