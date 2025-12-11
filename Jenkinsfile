@@ -85,20 +85,30 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                echo "Pushing Verified Images..."
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'D_USER', passwordVariable: 'D_PASS')]) {
+                echo "🚀 Pushing Verified Images..."
+                
+                // NEW: Fetch secrets from Vault instead of Jenkins Credential Store
+                withVault(configuration: [timeout: 60, vaultUrl: 'http://127.0.0.1:8200', vaultCredentialId: 'vault-root-token'], 
+                vaultSecrets: [[path: 'secret/dockerhub', secretValues: [
+                    [envVar: 'D_USER', vaultKey: 'username'],
+                    [envVar: 'D_PASS', vaultKey: 'password']]]]) {
+                    
                     sh '''
+                    echo "🔓 Authenticating with Docker Hub via Vault Secrets..."
+                    
+                    # Log in using the variables injected by Vault
                     echo "$D_PASS" | docker login -u "$D_USER" --password-stdin
                     
-                    # Tag the Compose-built images to Docker Hub names
-                    # Note: Using 'mlops-pipeline' prefix based on your previous logs
-                    
+                    # Tag and Push Backend
                     docker tag mlops-pipeline-backend:latest ${BACKEND_IMAGE_HUB}:latest
-                    docker tag mlops-pipeline-frontend:latest ${FRONTEND_IMAGE_HUB}:latest
-                    docker tag mlops-pipeline-alert-service:latest ${ALERT_IMAGE_HUB}:latest
-                    
                     docker push ${BACKEND_IMAGE_HUB}:latest
+                    
+                    # Tag and Push Frontend
+                    docker tag mlops-pipeline-frontend:latest ${FRONTEND_IMAGE_HUB}:latest
                     docker push ${FRONTEND_IMAGE_HUB}:latest
+                    
+                    # Tag and Push Alert Service
+                    docker tag mlops-pipeline-alert-service:latest ${ALERT_IMAGE_HUB}:latest
                     docker push ${ALERT_IMAGE_HUB}:latest
                     '''
                 }

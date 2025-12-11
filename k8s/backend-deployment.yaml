@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-backend
+spec:
+  replicas: 1  # We start with 1 copy
+  selector:
+    matchLabels:
+      app: ml-backend
+  template:
+    metadata:
+      labels:
+        app: ml-backend
+    spec:
+      imagePullSecrets:
+      - name: regcred  # This uses the secret we just created!
+      containers:
+      - name: ml-backend
+        image: souravmdileep/backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            memory: "2Gi"  # Prevent it from eating all RAM
+            cpu: "1000m"
+        env:
+        - name: ALERT_SERVICE_URL
+          value: "http://ml-alert-service:8001/log_violation"

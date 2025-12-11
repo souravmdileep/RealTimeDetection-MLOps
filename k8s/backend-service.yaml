@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-backend
+spec:
+  selector:
+    app: ml-backend
+  ports:
+    - protocol: TCP
+      port: 8000       # Port accessible inside the cluster
+      targetPort: 8000 # Port the container is listening on
+      nodePort: 30001  # Static port so you can access it from localhost
+  type: NodePort

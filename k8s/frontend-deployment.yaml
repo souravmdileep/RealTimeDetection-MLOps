@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ml-frontend
+  template:
+    metadata:
+      labels:
+        app: ml-frontend
+    spec:
+      imagePullSecrets:
+      - name: regcred
+      containers:
+      - name: ml-frontend
+        image: souravmdileep/frontend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-frontend
+spec:
+  selector:
+    app: ml-frontend
+  ports:
+    - protocol: TCP
+      port: 80         # Browser hits port 80
+      targetPort: 80   # Container listens on 80
+      nodePort: 30002  # We will access via localhost:30002
+  type: NodePort
