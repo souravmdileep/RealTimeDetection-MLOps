@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import time
+import sys  # <--- ADDED THIS (Required for sys.exit)
 from collections import Counter
 
 # Configuration
@@ -71,7 +72,7 @@ def detect_drift():
 
     if not all_conf:
         print("No detections made. Potential severe drift or broken model.")
-        return
+        sys.exit(1)  # <--- ADDED THIS: Fail if model is broken
 
     # Compute Current Metrics
     avg_conf = sum(all_conf) / len(all_conf)
@@ -104,6 +105,12 @@ def detect_drift():
         print("\n DRIFT DETECTED! ")
         for reason in drift_reasons:
             print(f" - {reason}")
+        
+        # <--- CRITICAL ADDITION START --->
+        print("Stopping Pipeline due to Quality Gate Failure.")
+        sys.exit(1) 
+        # <--- CRITICAL ADDITION END --->
+        
     else:
         print("\nSystem Healthy. No drift detected.")
 
