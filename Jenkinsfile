@@ -32,7 +32,7 @@ pipeline {
                     // 3. BACKEND: Build from source (Required to apply code fixes)
                     echo "Building Backend..."
                     
-                    // We try to pull first to use it as a cache source (speeds up build), 
+                    // We  try to pull first to use it as a cache source (speeds up build), 
                     // but we MUST run 'build' to apply your new app.py changes.
                     sh """
                         docker pull ${BACKEND_IMAGE_HUB}:latest || true
