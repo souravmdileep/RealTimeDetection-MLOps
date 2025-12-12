@@ -1,0 +1,31 @@
+---
+# --- 1. INSTALL KUBECTL ---
+- name: Download the latest kubectl binary
+  get_url:
+    url: https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+# --- 2. INSTALL MINIKUBE ---
+- name: Download Minikube binary
+  get_url:
+    url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    dest: /usr/local/bin/minikube
+    mode: '0755'
+
+# --- 3. VERIFY INSTALLATION ---
+- name: Verify kubectl version
+  command: kubectl version --client
+  register: kubectl_out
+  changed_when: false
+
+- name: Verify minikube version
+  command: minikube version
+  register: minikube_out
+  changed_when: false
+
+- name: Print Versions
+  debug:
+    msg: 
+      - "Kubectl: {{ kubectl_out.stdout }}"
+      - "Minikube: {{ minikube_out.stdout }}"
